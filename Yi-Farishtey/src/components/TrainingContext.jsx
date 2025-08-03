@@ -3,23 +3,60 @@ import React, { createContext, useState } from "react";
 export const TrainingContext = createContext();
 
 export const TrainingProvider = ({ children }) => {
-  const [requests, setRequests] = useState([]);
+  const [institutions, setInstitutions] = useState([]);
+  const [trainers, setTrainers] = useState([]);
 
-  const addRequest = (data) => {
-    setRequests((prev) => [
-      ...prev,
-      { ...data, id: prev.length + 1, status: "Pending" },
-    ]);
+  // Add Institution
+  const addInstitution = (name) => {
+    setInstitutions([...institutions, { name, status: "Pending" }]);
   };
 
-  const updateRequest = (id, updatedData) => {
-    setRequests((prev) =>
-      prev.map((req) => (req.id === id ? { ...req, ...updatedData } : req))
-    );
+  // Add Trainer
+  const addTrainer = (name) => {
+    setTrainers([...trainers, { name, status: "Pending" }]);
+  };
+
+  // Approve Institution
+  const approveInstitution = (index) => {
+    const updated = [...institutions];
+    updated[index].status = "Approved";
+    setInstitutions(updated);
+  };
+
+  // Reject Institution
+  const rejectInstitution = (index) => {
+    const updated = [...institutions];
+    updated[index].status = "Rejected";
+    setInstitutions(updated);
+  };
+
+  // Approve Trainer
+  const approveTrainer = (index) => {
+    const updated = [...trainers];
+    updated[index].status = "Approved";
+    setTrainers(updated);
+  };
+
+  // Reject Trainer
+  const rejectTrainer = (index) => {
+    const updated = [...trainers];
+    updated[index].status = "Rejected";
+    setTrainers(updated);
   };
 
   return (
-    <TrainingContext.Provider value={{ requests, addRequest, updateRequest }}>
+    <TrainingContext.Provider
+      value={{
+        institutions,
+        trainers,
+        addInstitution,
+        addTrainer,
+        approveInstitution,
+        rejectInstitution,
+        approveTrainer,
+        rejectTrainer,
+      }}
+    >
       {children}
     </TrainingContext.Provider>
   );

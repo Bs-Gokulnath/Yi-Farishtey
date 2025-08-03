@@ -6,6 +6,9 @@ import BookTraining from './pages/book_training';
 import AdminApprovalDashboard from './pages/approval_dashboard';
 import { TrainingProvider } from './components/TrainingContext'; 
 import Homepage from './pages/Homepage';
+import AddInstitution from './pages/add_institution';
+import AddTrainer from './pages/add_trainer';
+import AdminApprovalPage from './pages/add_ins_tra';
 
 function App() {
   return (
@@ -17,6 +20,10 @@ function App() {
           <Route path="/signin" element={<Signin />} />
           <Route path="/book-training" element={<BookTraining />} />
           <Route path="/approval" element={<AdminApprovalDashboard />} />
+          <Route path="/add-institution" element={<AddInstitution />} />
+          <Route path="/add-trainer" element={<AddTrainer />} />
+          <Route path="/admin-ins-tra" element={<AdminApprovalPage />} />
+
         </Routes>
       </BrowserRouter>
     </TrainingProvider>

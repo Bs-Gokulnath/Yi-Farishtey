@@ -20,16 +20,19 @@ const Signup = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const API_BASE_URL = "http://62.72.59.3:5056";
+
+
   const handleSignup = async (e) => {
     e.preventDefault();
-    
-    // Validation
+
+    // ✅ Validation
     if (!email || !chapter) {
       setError("Please fill all fields.");
       return;
     }
 
-    // Email validation
+    // ✅ Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError("Please enter a valid email address.");
@@ -40,36 +43,37 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      console.log('Sending signup request:', { email, chapter });
-      
-      const response = await axios.post("http://localhost:5000/api/signup", {
+      console.log("Sending signup request:", { email, chapter });
+
+      // ✅ Updated API Endpoint
+      const response = await axios.post(`${API_BASE_URL}/api/signup`, {
         email,
         chapter,
       });
 
-      console.log('Signup response:', response.data);
+      console.log("Signup response:", response.data);
 
-      if (response.status === 201) {
+      if (response.status === 201 || response.status === 200) {
         alert("Signup successful! You can now sign in.");
         setEmail("");
         setChapter("");
       }
     } catch (err) {
-      console.error('Signup error:', err);
-      
+      console.error("Signup error:", err);
+
       if (err.response) {
-        // Server responded with error status
-        const errorMessage = err.response.data?.message || "Signup failed. Please try again.";
+        const errorMessage =
+          err.response.data?.message || "Signup failed. Please try again.";
         setError(errorMessage);
-        console.error('Server error details:', err.response.data);
+        console.error("Server error details:", err.response.data);
       } else if (err.request) {
-        // Request was made but no response received
-        setError("Unable to connect to server. Please check your internet connection.");
-        console.error('Network error:', err.request);
+        setError(
+          "Unable to connect to server. Please check your internet connection."
+        );
+        console.error("Network error:", err.request);
       } else {
-        // Something else happened
         setError("An unexpected error occurred. Please try again.");
-        console.error('Unexpected error:', err.message);
+        console.error("Unexpected error:", err.message);
       }
     } finally {
       setLoading(false);
@@ -84,7 +88,9 @@ const Signup = () => {
           onSubmit={handleSignup}
           className="bg-[#85C2FF] shadow-xl p-8 rounded-xl w-full max-w-md space-y-6"
         >
-          <h2 className="text-2xl font-bold text-center text-gray-800 mt-[-20px]">Sign Up</h2>
+          <h2 className="text-2xl font-bold text-center text-gray-800 mt-[-20px]">
+            Sign Up
+          </h2>
 
           {error && (
             <div className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-lg border border-red-200">
@@ -116,7 +122,9 @@ const Signup = () => {
             >
               <option value="">Select Chapter</option>
               {CHAPTERS.map((ch) => (
-                <option key={ch} value={ch}>{ch}</option>
+                <option key={ch} value={ch}>
+                  {ch}
+                </option>
               ))}
             </select>
           </div>
