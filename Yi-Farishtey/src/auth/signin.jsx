@@ -5,7 +5,7 @@ import Header from "../components/Header";
 
 const Signin = () => {
   const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState(["", "", ""]);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [step, setStep] = useState("email");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -35,11 +35,40 @@ const Signin = () => {
     setError("");
     setLoading(true);
     try {
-      await axios.post(`${API_BASE_URL}/api/signin/send-otp`, { email });
+      console.log("Sending OTP request:", { email });
+      const response = await axios.post(`${API_BASE_URL}/send-otp`, { email });
+      console.log("OTP response:", response.data);
       setStep("otp");
       alert("OTP sent to your email.");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to send OTP");
+      console.error("Send OTP error:", err);
+      if (err.response) {
+        // Handle array of error details
+        let errorMessage = "Failed to send OTP";
+        console.log("Full error response:", JSON.stringify(err.response.data, null, 2));
+        
+        if (err.response.data?.detail) {
+          if (Array.isArray(err.response.data.detail)) {
+            const firstError = err.response.data.detail[0];
+            if (typeof firstError === 'object' && firstError.msg) {
+              errorMessage = firstError.msg;
+            } else if (typeof firstError === 'string') {
+              errorMessage = firstError;
+            } else {
+              errorMessage = "Email not found or invalid";
+            }
+          } else if (typeof err.response.data.detail === 'string') {
+            errorMessage = err.response.data.detail;
+          }
+        } else if (err.response.data?.message) {
+          errorMessage = err.response.data.message;
+        }
+        
+        setError(String(errorMessage)); // Ensure it's a string
+        console.error("Server error details:", err.response.data);
+      } else {
+        setError("Failed to send OTP. Please check your connection.");
+      }
     } finally {
       setLoading(false);
     }
@@ -49,25 +78,51 @@ const Signin = () => {
   const verifyOtpAndSignin = async (e) => {
     e.preventDefault();
     const enteredOtp = otp.join("");
-    if (enteredOtp.length !== 3) {
-      setError("Enter the complete 3-digit OTP");
+    if (enteredOtp.length !== 6) {
+      setError("Enter the complete 6-digit OTP");
       return;
     }
 
     setLoading(true);
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/signin`, {
+      console.log("Verifying OTP:", { email, otp: enteredOtp });
+      const response = await axios.post(`${API_BASE_URL}/signin`, {
         email,
         otp: enteredOtp,
       });
-
-      if (response.data.success) {
+      
+      console.log("Signin response:", response.data);
+      
+      if (response.status === 200 || response.status === 201) {
         alert("Signin successful!");
-        localStorage.setItem("user", JSON.stringify(response.data.user));
-        navigate("/analyze");
+        // Store user data if provided
+        if (response.data.user_id) {
+          localStorage.setItem("user", JSON.stringify({
+            email: email,
+            user_id: response.data.user_id
+          }));
+        }
+        navigate("/book-training");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Signin failed");
+      console.error("Signin error:", err);
+      if (err.response) {
+        // Handle array of error details
+        let errorMessage = "Signin failed";
+        if (err.response.data?.detail) {
+          if (Array.isArray(err.response.data.detail)) {
+            errorMessage = err.response.data.detail[0]?.msg || err.response.data.detail[0] || "Signin failed";
+          } else {
+            errorMessage = err.response.data.detail;
+          }
+        } else if (err.response.data?.message) {
+          errorMessage = err.response.data.message;
+        }
+        setError(String(errorMessage)); // Ensure it's a string
+        console.error("Server error details:", err.response.data);
+      } else {
+        setError("Signin failed. Please check your connection.");
+      }
     } finally {
       setLoading(false);
     }
@@ -104,8 +159,8 @@ const Signin = () => {
 
           {step === "otp" && (
             <div>
-              <label className="block mb-2">Enter 3-Digit OTP</label>
-              <div className="flex justify-between space-x-2">
+              <label className="block mb-2">Enter 6-Digit OTP</label>
+              <div className="flex justify-between space-x-1">
                 {otp.map((digit, index) => (
                   <input
                     key={index}
@@ -114,7 +169,7 @@ const Signin = () => {
                     value={digit}
                     onChange={(e) => handleOtpChange(e, index)}
                     ref={(el) => (inputsRef.current[index] = el)}
-                    className="w-14 h-14 text-center border rounded-lg text-xl focus:ring-2 focus:ring-purple-500"
+                    className="w-12 h-12 text-center border rounded-lg text-lg focus:ring-2 focus:ring-purple-500"
                   />
                 ))}
               </div>

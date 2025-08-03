@@ -16,52 +16,73 @@ const BookTraining = () => {
     number: "",
     email: "",
     venue: "",
-    participants: "",
+    no_of_participants: "",
     chapter: "",
-    date: "",
-    trainer: "",
+    requested_date: "",
     time: "",
   });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    if (name === "participants") {
+      setFormData({ ...formData, no_of_participants: value });
+    } else if (name === "date") {
+      setFormData({ ...formData, requested_date: value });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
+
+  const isFormValid = Object.values(formData).every((field) => field !== "");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!isFormValid) {
+      toast.error("Please fill in all fields.", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+      return;
+    }
+
     try {
-      // Send form data to backend
-      const response = await fetch(`${API_BASE_URL}/api/training-requests`, {
-        method: 'POST',
+      const response = await fetch(`${API_BASE_URL}/create-session`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
-        addRequest(formData); // Update context if needed
-        toast.success("Request Submitted!", {
+        const result = await response.json();
+        console.log("✅ Session Created:", result);
+
+        addRequest(result);
+        toast.success("Request Submitted Successfully!", {
           position: "top-right",
           autoClose: 3000,
         });
+
         setTimeout(() => navigate("/approval"), 1500);
       } else {
-        throw new Error('Failed to submit request');
+        const errorData = await response.json();
+        console.error("❌ API Error:", errorData);
+        toast.error("Failed to submit request. Please try again.", {
+          position: "top-right",
+          autoClose: 3000,
+        });
       }
     } catch (error) {
-      console.error('Error submitting form:', error);
-      toast.error("Error submitting request. Please try again.", {
+      console.error("❌ Error submitting form:", error);
+      toast.error("Error submitting request. Please try again later.", {
         position: "top-right",
         autoClose: 3000,
       });
     }
   };
-
-  // Validation: Check if all required fields are filled
-  const isFormValid = Object.values(formData).every((value) => value.trim() !== "");
 
   return (
     <div className="min-h-screen bg-[#BFF2FF] flex flex-col">
@@ -70,14 +91,14 @@ const BookTraining = () => {
       <main className="flex flex-col items-center">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Book Training</h1>
 
-        <div
-          className="bg-[#85C2FF] shadow-lg rounded-2xl p-8 w-full max-w-4xl"
-        >
+        <div className="bg-[#85C2FF] shadow-lg rounded-2xl p-8 w-full max-w-4xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* LEFT COLUMN */}
             <div className="space-y-4">
               <div>
-                <label className="block text-gray-700 font-semibold mb-1">Name:</label>
+                <label className="block text-gray-700 font-semibold mb-1">
+                  Name:
+                </label>
                 <input
                   type="text"
                   name="name"
@@ -90,7 +111,9 @@ const BookTraining = () => {
               </div>
 
               <div>
-                <label className="block text-gray-700 font-semibold mb-1">Number:</label>
+                <label className="block text-gray-700 font-semibold mb-1">
+                  Number:
+                </label>
                 <input
                   type="text"
                   name="number"
@@ -103,7 +126,9 @@ const BookTraining = () => {
               </div>
 
               <div>
-                <label className="block text-gray-700 font-semibold mb-1">Email:</label>
+                <label className="block text-gray-700 font-semibold mb-1">
+                  Email:
+                </label>
                 <input
                   type="email"
                   name="email"
@@ -116,7 +141,9 @@ const BookTraining = () => {
               </div>
 
               <div>
-                <label className="block text-gray-700 font-semibold mb-1">Venue:</label>
+                <label className="block text-gray-700 font-semibold mb-1">
+                  Venue:
+                </label>
                 <input
                   type="text"
                   name="venue"
@@ -132,11 +159,13 @@ const BookTraining = () => {
             {/* RIGHT COLUMN */}
             <div className="space-y-4">
               <div>
-                <label className="block text-gray-700 font-semibold mb-1">No. of Participants:</label>
+                <label className="block text-gray-700 font-semibold mb-1">
+                  No. of Participants:
+                </label>
                 <input
                   type="number"
                   name="participants"
-                  value={formData.participants}
+                  value={formData.no_of_participants}
                   onChange={handleChange}
                   placeholder="Enter number of participants"
                   className="w-full border border-gray-700 rounded-lg px-3 py-2"
@@ -145,7 +174,9 @@ const BookTraining = () => {
               </div>
 
               <div>
-                <label className="block text-gray-700 font-semibold mb-1">Chapter:</label>
+                <label className="block text-gray-700 font-semibold mb-1">
+                  Chapter:
+                </label>
                 <input
                   type="text"
                   name="chapter"
@@ -158,11 +189,13 @@ const BookTraining = () => {
               </div>
 
               <div>
-                <label className="block text-gray-700 font-semibold mb-1">Requested Date:</label>
+                <label className="block text-gray-700 font-semibold mb-1">
+                  Requested Date:
+                </label>
                 <input
                   type="date"
                   name="date"
-                  value={formData.date}
+                  value={formData.requested_date}
                   onChange={handleChange}
                   className="w-full border border-gray-700 rounded-lg px-3 py-2"
                   required
@@ -170,7 +203,9 @@ const BookTraining = () => {
               </div>
 
               <div>
-                <label className="block text-gray-700 font-semibold mb-1">Time:</label>
+                <label className="block text-gray-700 font-semibold mb-1">
+                  Time:
+                </label>
                 <input
                   type="time"
                   name="time"

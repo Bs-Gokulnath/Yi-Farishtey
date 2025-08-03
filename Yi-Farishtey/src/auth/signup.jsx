@@ -43,12 +43,12 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      console.log("Sending signup request:", { email, chapter });
+      console.log("Sending signup request:", { email, chapter_name: chapter });
 
       // ✅ Updated API Endpoint
-      const response = await axios.post(`${API_BASE_URL}/api/signup`, {
+      const response = await axios.post(`${API_BASE_URL}/signup`, {
         email,
-        chapter,
+        chapter_name: chapter,
       });
 
       console.log("Signup response:", response.data);
@@ -59,21 +59,23 @@ const Signup = () => {
         setChapter("");
       }
     } catch (err) {
-      console.error("Signup error:", err);
-
-      if (err.response) {
-        const errorMessage =
-          err.response.data?.message || "Signup failed. Please try again.";
-        setError(errorMessage);
-        console.error("Server error details:", err.response.data);
+      // Handle "Email already registered" case
+      if (err.response && err.response.status === 422) {
+        if (err.response.data?.detail === "Email already registered" || 
+            (Array.isArray(err.response.data?.detail) && 
+             err.response.data.detail[0] === "Email already registered")) {
+          alert("This email is already registered. Please use a different email or try signing in.");
+          setEmail("");
+          setChapter("");
+        } else {
+          setError("Signup failed. Please check your details and try again.");
+        }
       } else if (err.request) {
         setError(
           "Unable to connect to server. Please check your internet connection."
         );
-        console.error("Network error:", err.request);
       } else {
         setError("An unexpected error occurred. Please try again.");
-        console.error("Unexpected error:", err.message);
       }
     } finally {
       setLoading(false);
