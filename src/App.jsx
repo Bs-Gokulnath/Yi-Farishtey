@@ -4,6 +4,7 @@ import Signup from './auth/signup';
 import Signin from './auth/signin';
 import BookTraining from './pages/book_training';
 import AdminApprovalDashboard from './pages/approval_dashboard';
+import RequestStatus from "./pages/MyTrainingRequests";
 import { TrainingProvider } from './components/TrainingContext'; 
 import Homepage from './pages/Homepage';
 import AddInstitution from './pages/add_institution';
@@ -23,6 +24,7 @@ function App() {
           <Route path="/add-institution" element={<AddInstitution />} />
           <Route path="/add-trainer" element={<AddTrainer />} />
           <Route path="/admin-ins-tra" element={<AdminApprovalPage />} />
+          <Route path="/request-status" element={<RequestStatus />} />
 
         </Routes>
       </BrowserRouter>
