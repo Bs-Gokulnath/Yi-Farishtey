@@ -9,13 +9,13 @@ const MyTrainingRequests = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const userEmail = localStorage.getItem("userEmail"); // 👈 Store this at login
+  const userEmail = localStorage.getItem("userEmail");
 
   useEffect(() => {
     const fetchMyRequests = async () => {
       try {
         const res = await axios.get(`${API_BASE_URL}/sessions?email=${userEmail}`);
-        const reversed = res.data.reverse(); // Latest first
+        const reversed = (res.data || []).reverse();
         setRequests(reversed);
       } catch (err) {
         console.error(err);
@@ -25,7 +25,17 @@ const MyTrainingRequests = () => {
       }
     };
     fetchMyRequests();
-  }, []);
+  }, [userEmail]);
+
+  // Utility to get user-friendly status + badge color
+  const getStatus = (req) => {
+    if (req.allotment_status === "approved")
+      return { text: "Approved", color: "bg-green-100 text-green-700" };
+    if (req.allotment_status === "rejected")
+      return { text: "Rejected", color: "bg-red-100 text-red-700" };
+    // Pending if null/undefined/other
+    return { text: "Pending", color: "bg-yellow-100 text-yellow-700" };
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-cyan-100 to-[#c0f8ff] p-6">
@@ -46,30 +56,34 @@ const MyTrainingRequests = () => {
           </p>
         ) : (
           <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {requests.map((req) => (
-              <div
-                key={req.id}
-                className="bg-white shadow-md rounded-xl p-5 border border-blue-100"
-              >
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{req.venue}</h3>
-                <p><strong>Date:</strong> {req.requested_date}</p>
-                <p><strong>Time:</strong> {req.time}</p>
-                <p><strong>Participants:</strong> {req.no_of_participants}</p>
-                <p><strong>Chapter:</strong> {req.chapter}</p>
+            {requests.map((req) => {
+              const { text, color } = getStatus(req);
+              return (
+                <div
+                  key={req.session_id}
+                  className="bg-white shadow-md rounded-xl p-5 border border-blue-100"
+                >
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{req.venue}</h3>
+                  <p><strong>Date:</strong> {req.requested_date}</p>
+                  <p><strong>Time:</strong> {req.time}</p>
+                  <p><strong>Participants:</strong> {req.no_of_participants}</p>
+                  <p><strong>Chapter:</strong> {req.chapter}</p>
+                  {/* Show Trainer/Institute if allotted */}
+                  {req.training_institute && (
+                    <p><strong>Institute:</strong> {req.training_institute}</p>
+                  )}
+                  {req.trainer && (
+                    <p><strong>Trainer:</strong> {req.trainer}</p>
+                  )}
 
-                <div className="mt-4">
-                  <span className={`text-sm font-bold px-3 py-1 rounded-full ${
-                    req.status === "Allotted"
-                      ? "bg-green-100 text-green-700"
-                      : req.status === "Rejected"
-                      ? "bg-red-100 text-red-700"
-                      : "bg-yellow-100 text-yellow-700"
-                  }`}>
-                    Status: {req.status || "Pending"}
-                  </span>
+                  <div className="mt-4">
+                    <span className={`text-sm font-bold px-3 py-1 rounded-full ${color}`}>
+                      Status: {text}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
