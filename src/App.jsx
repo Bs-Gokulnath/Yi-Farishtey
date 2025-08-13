@@ -10,6 +10,7 @@ import Homepage from './pages/Homepage';
 import AddInstitution from './pages/add_institution';
 import AddTrainer from './pages/add_trainer';
 import AdminApprovalPage from './pages/add_ins_tra';
+import SuperAdminApprovalDashboard from './pages/SuperAdminApprovalDashboard';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           <Route path="/add-trainer" element={<AddTrainer />} />
           <Route path="/admin-ins-tra" element={<AdminApprovalPage />} />
           <Route path="/request-status" element={<RequestStatus />} />
+          <Route path="/super-admin-approval" element={<SuperAdminApprovalDashboard />} />
 
         </Routes>
       </BrowserRouter>

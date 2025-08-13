@@ -88,6 +88,7 @@ const Signin = () => {
         alert("Signin successful!");
         // Save user info
         localStorage.setItem("user", JSON.stringify(response.data));
+        localStorage.setItem("role", response.data.role || "user");
         navigate("/book-training");
       }
     } catch (err) {

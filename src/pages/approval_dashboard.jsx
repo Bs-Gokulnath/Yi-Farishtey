@@ -4,225 +4,372 @@ import axios from "axios";
 
 const API_BASE_URL = "http://62.72.59.3:5056";
 
-const institutes = ["Institute A", "Institute B", "Institute C"];
-const trainers = ["Trainer X", "Trainer Y", "Trainer Z"];
-
 const AdminApprovalDashboard = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedValues, setSelectedValues] = useState({});
+  const [trainersList, setTrainersList] = useState([]);
+  const [institutesList, setInstitutesList] = useState([]);
+  const [showAddTrainerModal, setShowAddTrainerModal] = useState(false);
+  const [showAddInstituteModal, setShowAddInstituteModal] = useState(false);
 
-  // Fetch sessions from API
+  const [newTrainerData, setNewTrainerData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    training_institute: "",
+    designation: "",
+  });
+
+  const [newInstituteData, setNewInstituteData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+  });
+
+  // Fetch sessions
   const fetchSessions = async () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_BASE_URL}/sessions`);
-      // Assuming response.data is an array of sessions with unique 'id' keys
-      const reversedData = (response.data || []).reverse();
-      setRequests(reversedData);
-      setLoading(false);
+      setRequests((response.data || []).reverse());
     } catch (err) {
       setError("Failed to fetch sessions.");
+    } finally {
       setLoading(false);
     }
   };
 
-  // Update a session field to local state and backend
-  const updateSession = async (id, field, value) => {
-    
-    if (!id) {
-      console.error("updateSession called with missing id");
-      return;
-    }
-
+  const fetchTrainers = async () => {
     try {
-      // Sending PUT request with payload as { field: value }
-      await axios.put(`${API_BASE_URL}/session/${id}`, { [field]: value });
-
-      setRequests((prev) =>
-        prev.map((req) => (req.id === id ? { ...req, [field]: value } : req))
-      );
-    } catch (err) {
-      console.error("Error updating session:", err);
-      alert("❌ Failed to update session. Please try again.");
+      const res = await axios.get(`${API_BASE_URL}/trainers`);
+      const approvedTrainers = res.data
+        .filter((t) => t.status === "approved" || t.status === "active")
+        .map((t) => t.name);
+      setTrainersList(approvedTrainers);
+    } catch (error) {
+      console.error("Failed to fetch trainers", error);
     }
   };
 
-  // Approve a session by sending a POST request and updating status
-  const approveSession = async (id, training_institute, trainer) => {
-    if (!id || !training_institute || !trainer) {
-      alert("Please select both a training institute and trainer before approving.");
-      return;
-    }
-
+  const fetchInstitutes = async () => {
     try {
-      const payload = {
-        session_id: id,
-        training_institute,
-        trainer,
-      };
-
-      await axios.post(`${API_BASE_URL}/approve-session`, payload);
-
-      alert("✅ Session approved successfully");
-
-      // Update status locally and backend
-      await updateSession(id, "status", "Allotted");
-    } catch (err) {
-      console.error("Approval failed:", err);
-      alert("❌ Could not approve session.");
+      const res = await axios.get(`${API_BASE_URL}/institutes`);
+      const approvedInstitutes = res.data
+        .filter((i) => i.status === "approved" || i.status === "active")
+        .map((i) => i.name);
+      setInstitutesList(approvedInstitutes);
+    } catch (error) {
+      console.error("Failed to fetch institutes", error);
     }
-  };
-
-  // Handles Reject action: update status locally and backend
-  const handleReject = async (id) => {
-    await updateSession(id, "status", "Rejected");
   };
 
   useEffect(() => {
+    fetchTrainers();
+    fetchInstitutes();
     fetchSessions();
   }, []);
 
+  const updateSession = async (session_id, field, value) => {
+    if (!session_id) return;
+    try {
+      await axios.put(`${API_BASE_URL}/session/${session_id}`, {
+        [field]: value,
+      });
+      setRequests((prev) =>
+        prev.map((req) =>
+          req.session_id === session_id ? { ...req, [field]: value } : req
+        )
+      );
+    } catch (err) {
+      console.error("Error updating session:", err);
+    }
+  };
+
+  const approveSession = async (session_id, training_institute, trainer) => {
+    if (!session_id || !training_institute || !trainer) {
+      alert("Please select both a training institute and a trainer.");
+      return;
+    }
+    try {
+      await axios.post(`${API_BASE_URL}/approve-session`, {
+        session_id,
+        training_institute,
+        trainer,
+        allotment_status: "approved",
+      });
+      alert("Session approved successfully!");
+      await fetchSessions();
+    } catch (err) {
+      console.error("Approval failed:", err);
+    }
+  };
+
+  const rejectSession = async (session_id) => {
+    if (!session_id) return;
+    try {
+      await updateSession(session_id, "allotment_status", "rejected");
+    } catch (err) {
+      console.error("Reject failed:", err);
+    }
+  };
+
+  const handleTrainerInputChange = (e) => {
+    setNewTrainerData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+  };
+
+  const handleInstituteInputChange = (e) => {
+    setNewInstituteData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+  };
+
+  const handleAddTrainer = async () => {
+    if (!newTrainerData.name.trim() || !newTrainerData.email.trim()) {
+      alert("Please fill in at least name and email");
+      return;
+    }
+    try {
+      await axios.post(`${API_BASE_URL}/add-trainer`, newTrainerData);
+      alert("Trainer added successfully and sent for approval.");
+      setShowAddTrainerModal(false);
+      setNewTrainerData({
+        name: "",
+        email: "",
+        phone: "",
+        training_institute: "",
+        designation: "",
+      });
+      await fetchTrainers();
+    } catch (err) {
+      console.error("Failed to add trainer", err);
+    }
+  };
+
+  const handleAddInstitute = async () => {
+    if (!newInstituteData.name.trim() || !newInstituteData.email.trim()) {
+      alert("Please fill in at least name and email");
+      return;
+    }
+    try {
+      await axios.post(`${API_BASE_URL}/add-institute`, newInstituteData);
+      alert("Institute added successfully and sent for approval.");
+      setShowAddInstituteModal(false);
+      setNewInstituteData({
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+        city: "",
+        state: "",
+      });
+      await fetchInstitutes();
+    } catch (err) {
+      console.error("Failed to add institute", err);
+    }
+  };
+
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-blue-200 via-cyan-100 to-[#c0f8ff]">
-      {/* Background decorations */}
-      <div className="fixed inset-0 -z-10" aria-hidden="true">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-200 via-cyan-100 to-[#c0f8ff]" />
-        <div className="absolute w-80 h-80 bg-gradient-to-tr from-blue-300/40 via-blue-500/20 to-cyan-200/30 rounded-full blur-3xl left-[-100px] top-[-80px]" />
-        <div className="absolute w-72 h-72 bg-indigo-300/20 rounded-full blur-2xl right-[-80px] bottom-[-90px]" />
+    <div className="relative min-h-screen w-full bg-gradient-to-br from-blue-200 via-cyan-100 to-[#c0f8ff]">
+      <Header />
+      <div className="max-w-7xl mx-auto pt-6 px-2 md:px-6">
+        <h1 className="text-2xl font-black mb-6 text-center">Admin Approval Dashboard</h1>
+        {loading ? (
+          <p className="text-center">Loading sessions...</p>
+        ) : error ? (
+          <p className="text-center text-red-600">{error}</p>
+        ) : (
+          <div className="overflow-x-auto bg-white/80 rounded-2xl shadow-xl border">
+            <table className="w-full text-left min-w-[900px]">
+              <thead>
+                <tr className="bg-gradient-to-r from-cyan-500 via-blue-600 to-blue-700 text-white">
+                  <th className="p-4">Venue</th>
+                  <th className="p-4">Institute</th>
+                  <th className="p-4">Trainer</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {requests.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="p-6 text-center">No training requests yet.</td>
+                  </tr>
+                ) : (
+                  requests.map((req) => (
+                    <tr key={req.session_id} className="hover:bg-cyan-50">
+                      <td className="p-4">{req.venue || "-"}</td>
+                      <td className="p-4">
+                        <select
+                          value={
+                            selectedValues[req.session_id]?.training_institute ||
+                            req.training_institute || ""
+                          }
+                          onChange={(e) => {
+                            if (e.target.value === "__add_institute__") {
+                              setShowAddInstituteModal(true);
+                              return;
+                            }
+                            setSelectedValues((prev) => ({
+                              ...prev,
+                              [req.session_id]: {
+                                ...prev[req.session_id],
+                                training_institute: e.target.value,
+                              },
+                            }));
+                          }}
+                          className="w-full border rounded-md px-2 py-1"
+                        >
+                          <option value="">Select</option>
+                          {institutesList.map((inst, idx) => (
+                            <option key={idx} value={inst}>{inst}</option>
+                          ))}
+                          <option value="__add_institute__">➕ Add New Institute...</option>
+                        </select>
+                      </td>
+                      <td className="p-4">
+                        <select
+                          value={
+                            selectedValues[req.session_id]?.trainer ||
+                            req.trainer || ""
+                          }
+                          onChange={(e) => {
+                            if (e.target.value === "__add_trainer__") {
+                              setShowAddTrainerModal(true);
+                              return;
+                            }
+                            setSelectedValues((prev) => ({
+                              ...prev,
+                              [req.session_id]: {
+                                ...prev[req.session_id],
+                                trainer: e.target.value,
+                              },
+                            }));
+                          }}
+                          className="w-full border rounded-md px-2 py-1"
+                        >
+                          <option value="">Select</option>
+                          {trainersList.map((trainer, idx) => (
+                            <option key={idx} value={trainer}>{trainer}</option>
+                          ))}
+                          <option value="__add_trainer__">➕ Add New Trainer...</option>
+                        </select>
+                      </td>
+                      <td className="p-4">
+                        <span
+                          className={`font-bold rounded-full px-3 py-1 block text-center ${
+                            req.allotment_status === null
+                              ? "text-yellow-700 bg-yellow-100"
+                              : req.allotment_status === "approved"
+                              ? "text-white bg-green-600"
+                              : req.allotment_status === "rejected"
+                              ? "text-red-700 bg-red-100"
+                              : "text-gray-600"
+                          }`}
+                        >
+                          {req.allotment_status
+                            ? req.allotment_status.charAt(0).toUpperCase() + req.allotment_status.slice(1)
+                            : "Pending"}
+                        </span>
+                      </td>
+                      <td className="p-4 flex gap-2">
+                        <button
+                          disabled={
+                            (!selectedValues[req.session_id]?.training_institute &&
+                              !req.training_institute) ||
+                            (!selectedValues[req.session_id]?.trainer && !req.trainer)
+                          }
+                          onClick={() =>
+                            approveSession(
+                              req.session_id,
+                              selectedValues[req.session_id]?.training_institute || req.training_institute,
+                              selectedValues[req.session_id]?.trainer || req.trainer
+                            )
+                          }
+                          className="bg-green-500 text-white px-3 py-1 rounded"
+                        >
+                          Allot
+                        </button>
+                        <button
+                          onClick={() => rejectSession(req.session_id)}
+                          className="bg-red-500 text-white px-3 py-1 rounded"
+                        >
+                          Reject
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      <Header />
-
-      <div className="max-w-7xl mx-auto pt-6 px-2 md:px-6">
-        <h1 className="md:hidden block text-2xl font-black mb-8 text-gray-900 text-center drop-shadow">
-          Admin Approval Dashboard
-        </h1>
-
-        <div className="flex flex-col md:flex-row items-start">
-          <div className="hidden md:flex w-24 justify-center pr-3">
-            <span
-              className="font-black text-3xl lg:text-2xl text-gray-900"
-              style={{
-                writingMode: "vertical-rl",
-                textOrientation: "mixed",
-                letterSpacing: "0.08em",
-                userSelect: "none",
-                lineHeight: 1,
-                marginBottom: 0,
-              }}
-            >
-              ADMIN APPROVAL DASHBOARD
-            </span>
-          </div>
-
-          <div className="flex-1 w-full">
-            {loading ? (
-              <p className="text-center text-gray-700">Loading sessions...</p>
-            ) : error ? (
-              <p className="text-center text-red-600 font-semibold">{error}</p>
-            ) : (
-              <div className="overflow-x-auto bg-white/80 backdrop-blur-md shadow-xl rounded-2xl border border-blue-100">
-                <table className="w-full text-left border-collapse min-w-[700px]">
-                  <thead>
-                    <tr className="bg-gradient-to-r from-cyan-500 via-blue-600 to-blue-700 text-white uppercase tracking-wide select-none">
-                      <th className="p-4 border border-blue-300 rounded-tl-2xl">Venue</th>
-                      <th className="p-4 border border-blue-300">Training Institute</th>
-                      <th className="p-4 border border-blue-300">Trainer</th>
-                      <th className="p-4 border border-blue-300 rounded-tr-2xl">Allotment Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {requests.length === 0 ? (
-                      <tr>
-                        <td colSpan="4" className="p-6 text-center text-gray-500 font-medium">
-                          No training requests yet.
-                        </td>
-                      </tr>
-                    ) : (
-                      requests.map((req) => (
-                        <tr
-                          key={req.session_id} // Ensure req.id is unique and defined
-                          className="hover:bg-cyan-50 transition-colors duration-150"
-                        >
-                          <td className="p-4 border border-blue-100 font-semibold text-gray-900">
-                            {req.venue || "-"}
-                          </td>
-                          <td className="p-4 border border-blue-100">
-                            <select
-                              value={req.training_institute || ""}
-                              onChange={(e) =>
-                                updateSession(req.id, "training_institute", e.target.value)
-                              }
-                              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-cyan-400 focus:outline-none transition"
-                            >
-                              <option value="">Select</option>
-                              {institutes.map((inst, i) => (
-                                <option key={i} value={inst}>
-                                  {inst}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="p-4 border border-blue-100">
-                            <select
-                              value={req.trainer || ""}
-                              onChange={(e) => updateSession(req.id, "trainer", e.target.value)}
-                              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-cyan-400 focus:outline-none transition"
-                            >
-                              <option value="">Select</option>
-                              {trainers.map((trainer, i) => (
-                                <option key={i} value={trainer}>
-                                  {trainer}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="p-4 border border-blue-100">
-                            <div className="flex gap-3 items-center">
-                              <button
-                                onClick={() => {
-                                  if (!req.training_institute || !req.trainer) {
-                                    alert(
-                                      "Please select both a training institute and trainer before allotting."
-                                    );
-                                    return;
-                                  }
-                                  approveSession(req.id, req.training_institute, req.trainer);
-                                }}
-                                className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg py-2 hover:from-green-600 hover:to-green-700 transition font-semibold"
-                              >
-                                Allot
-                              </button>
-                              <button
-                                onClick={() => handleReject(req.id)}
-                                className="flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg py-2 hover:from-red-600 hover:to-red-700 transition font-semibold"
-                              >
-                                Reject
-                              </button>
-                            </div>
-                            <p
-                              className={`mt-2 text-center font-bold ${
-                                req.status === "Pending"
-                                  ? "text-yellow-600"
-                                  : req.status === "Allotted"
-                                  ? "text-green-600"
-                                  : "text-red-600"
-                              }`}
-                            >
-                              {req.status || "Pending"}
-                            </p>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
+      {/* Add Trainer Modal */}
+      {showAddTrainerModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50"
+          style={{
+            background: "linear-gradient(135deg, #76e5f7cc 0%, #b3ffdb88 50%, #70a1ff99 100%)",
+            backdropFilter: "blur(20px)",
+          }}
+        >
+          <div className="relative w-96 rounded-2xl p-7 bg-white/70 shadow-2xl border">
+            <h2 className="text-xl font-bold mb-4 text-center">Add New Trainer</h2>
+            {["name", "email", "phone", "training_institute", "designation"].map((field, idx) => (
+              <input
+                key={idx}
+                name={field}
+                placeholder={field.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}
+                value={newTrainerData[field]}
+                onChange={handleTrainerInputChange}
+                className="w-full border rounded-md px-3 py-2 mb-2"
+              />
+            ))}
+            <div className="flex justify-end gap-3 mt-3">
+              <button onClick={() => setShowAddTrainerModal(false)} className="px-4 py-1 bg-gray-300 rounded">Cancel</button>
+              <button onClick={handleAddTrainer} className="px-4 py-1 bg-blue-600 text-white rounded">Save</button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Add Institute Modal */}
+      {showAddInstituteModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50"
+          style={{
+            background: "linear-gradient(120deg, #a7ffe8cc 0%, #ccf2ff88 60%, #a59af7bb 100%)",
+            backdropFilter: "blur(20px)",
+          }}
+        >
+          <div className="relative w-96 rounded-2xl p-7 bg-white/75 shadow-2xl border">
+            <h2 className="text-xl font-bold mb-4 text-center">Add New Institute</h2>
+            {["name", "email", "phone", "address", "city", "state"].map((field, idx) => (
+              <input
+                key={idx}
+                name={field}
+                placeholder={field.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}
+                value={newInstituteData[field]}
+                onChange={handleInstituteInputChange}
+                className="w-full border rounded-md px-3 py-2 mb-2"
+              />
+            ))}
+            <div className="flex justify-end gap-3 mt-3">
+              <button onClick={() => setShowAddInstituteModal(false)} className="px-4 py-1 bg-gray-300 rounded">Cancel</button>
+              <button onClick={handleAddInstitute} className="px-4 py-1 bg-blue-600 text-white rounded">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
